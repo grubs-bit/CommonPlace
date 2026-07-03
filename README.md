@@ -98,6 +98,11 @@ This is an early working `v0.1.0` build. Core functionality exists:
 - `#topic` assignment for notes, ideas, and files
 - 3D topic graph with bubble and line connections
 - universal search
+- in-app PDF viewer with page navigation and bookmarks
+- manual markdown export for notes and ideas
+- manual JSON backup and restore controls
+- better empty-state onboarding with sample library
+- topic graph search, filtering, zoom, and pan controls
 - cloud provider detection/integration via synced folders
 - unsigned macOS Apple Silicon release artifacts
 - unsigned Windows x64 release artifacts
@@ -188,11 +193,11 @@ For the most reliable Windows installer, build on a Windows machine or use GitHu
 
 ### Near term
 
-- Improve in-app PDF viewing and page navigation.
-- Add export for notes and ideas as `.md` files.
-- Add manual backup and restore controls.
-- Add a better empty-state/sample-library onboarding flow.
-- Improve topic graph controls: zoom, pan, filtering, and topic search.
+- Add PDF annotation/highlight notes.
+- Add richer backup history with backup naming and pruning.
+- Add topic graph drag/reposition controls.
+- Add batch import progress for large PDF folders.
+- Add per-module/course organization views.
 
 ### Release/distribution
 

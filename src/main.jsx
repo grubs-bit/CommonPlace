@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import ReactMarkdown from 'react-markdown';
-import { BookOpen, Cloud, FilePlus, FolderOpen, Home, Lightbulb, Moon, Network, Plus, Save, Search, Settings, StickyNote, Sun, Trash2 } from 'lucide-react';
+import { BookOpen, Bookmark, Cloud, Download, FilePlus, FolderOpen, Home, Lightbulb, Moon, Network, Plus, RotateCcw, Save, Search, Settings, StickyNote, Sun, Trash2, Upload, ZoomIn, ZoomOut } from 'lucide-react';
 import { createIdea, createNote, emptyData, formatTags, parseTags, touch } from './lib/data';
-import { buildTopicGraph } from './lib/graph';
+import { buildTopicGraph, filterTopicGraph } from './lib/graph';
 import { cloudProviderOptions, cloudStatusForPath } from './lib/cloud';
 import { searchAll } from './lib/search';
+import { exportItemToMarkdown, markdownFileName } from './lib/export';
+import { addBookmark, removeBookmark } from './lib/bookmarks';
+import { createSampleLibrary, isLibraryEmpty } from './lib/sampleLibrary';
 import { nextTheme, readStoredTheme, storeTheme } from './lib/theme';
 import appIcon from '../assets/commonplace-app-icon.png';
 import './styles.css';
@@ -84,6 +87,25 @@ function App() {
     setStatus(`Imported ${result.imported.length} file${result.imported.length === 1 ? '' : 's'}`);
   };
 
+  const loadSampleLibrary = async () => {
+    const sample = createSampleLibrary();
+    await persist(sample);
+    setData(sample);
+    setStatus('Sample library loaded');
+  };
+
+  const createBackup = async () => {
+    const backupPath = await api.createBackup();
+    if (backupPath) setStatus(`Backup created: ${backupPath}`);
+  };
+
+  const restoreBackup = async () => {
+    const result = await api.restoreBackup();
+    if (!result) return;
+    setData(result.data);
+    setStatus('Backup restored');
+  };
+
   const results = useMemo(() => searchAll(data, query, searchFilter), [data, query, searchFilter]);
 
   if (!libraryPath) {
@@ -135,12 +157,12 @@ function App() {
           }} />
         ) : (
           <>
-            {active === 'dashboard' && <Dashboard data={data} setActive={setActive} setSelected={setSelected} />}
+            {active === 'dashboard' && <Dashboard data={data} setActive={setActive} setSelected={setSelected} addNote={addNote} addIdea={addIdea} addFiles={addFiles} loadSampleLibrary={loadSampleLibrary} />}
             {active === 'library' && <Library data={data} persist={persist} addFiles={addFiles} selected={selected} setSelected={setSelected} />}
             {active === 'notes' && <Notes data={data} persist={persist} selected={selected} setSelected={setSelected} addNote={addNote} />}
             {active === 'ideas' && <Ideas data={data} persist={persist} selected={selected} setSelected={setSelected} addIdea={addIdea} />}
             {active === 'graph' && <TopicGraph data={data} setActive={setActive} setSelected={setSelected} />}
-            {active === 'settings' && <SettingsView libraryPath={libraryPath} chooseLibrary={chooseLibrary} openLibrary={() => api.openLibrary()} status={status} theme={theme} toggleTheme={toggleTheme} />}
+            {active === 'settings' && <SettingsView libraryPath={libraryPath} chooseLibrary={chooseLibrary} openLibrary={() => api.openLibrary()} createBackup={createBackup} restoreBackup={restoreBackup} status={status} theme={theme} toggleTheme={toggleTheme} />}
           </>
         )}
       </main>
@@ -163,9 +185,19 @@ function Welcome({ onChoose, theme, toggleTheme }) {
   );
 }
 
-function Dashboard({ data, setActive, setSelected }) {
+function Dashboard({ data, setActive, setSelected, addNote, addIdea, addFiles, loadSampleLibrary }) {
   const recent = [...data.notes.map(x => ({ ...x, kind: 'note' })), ...data.ideas.map(x => ({ ...x, kind: 'idea' })), ...data.files.map(x => ({ ...x, kind: 'file' }))]
     .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)).slice(0, 6);
+  if (isLibraryEmpty(data)) {
+    return <div className="page"><PageTitle title="Start your library" subtitle="Build a study workspace from notes, PDFs, ideas, and topics." />
+      <section className="card onboarding-grid">
+        <button onClick={addNote}><StickyNote size={22} /><strong>Create a note</strong><span>Start with markdown lecture notes.</span></button>
+        <button onClick={addIdea}><Lightbulb size={22} /><strong>Add an idea</strong><span>Capture essays, projects, and research angles.</span></button>
+        <button onClick={addFiles}><FilePlus size={22} /><strong>Import PDFs</strong><span>Add readings, slides, and text files.</span></button>
+        <button onClick={loadSampleLibrary}><BookOpen size={22} /><strong>Load sample library</strong><span>Try Commonplace with demo material.</span></button>
+      </section>
+    </div>;
+  }
   return <div className="page"><PageTitle title="Dashboard" subtitle="Your study materials at a glance." />
     <div className="stats">
       <Stat label="Notes" value={data.notes.length} /><Stat label="Ideas" value={data.ideas.length} /><Stat label="Files" value={data.files.length} />
@@ -181,14 +213,33 @@ function PageTitle({ title, subtitle }) { return <div className="page-title"><h2
 
 function Library({ data, persist, addFiles, selected, setSelected }) {
   const item = data.files.find((file) => file.id === selected) || data.files[0];
+  const [pdfUrl, setPdfUrl] = useState(null);
+  const [page, setPage] = useState(item?.lastPage || 1);
+  useEffect(() => {
+    setPage(item?.lastPage || 1);
+    setPdfUrl(null);
+    if (item?.type === 'pdf' && item.storedPath) api.previewFile(item.storedPath).then(setPdfUrl);
+  }, [item?.id]);
   const update = async (next) => persist({ ...data, files: data.files.map((file) => file.id === next.id ? touch(next) : file) });
   const remove = async (id) => { await persist({ ...data, files: data.files.filter((file) => file.id !== id) }); setSelected(null); };
+  const goPage = (nextPage) => {
+    const safe = Math.max(1, Number(nextPage) || 1);
+    setPage(safe);
+    if (item) update({ ...item, lastPage: safe });
+  };
+  const addPageBookmark = () => item && update(addBookmark(item, page));
+  const removePageBookmark = (bookmarkId) => item && update(removeBookmark(item, bookmarkId));
   return <SplitPage title="Library" subtitle="PDFs, markdown files, and imported notes." items={data.files} selected={item?.id} setSelected={setSelected} emptyAction={addFiles} emptyLabel="Add PDFs or notes">
     {!item ? <Empty text="No files imported yet." /> : <section className="editor card">
       <input className="title-input" value={item.title} onChange={(e) => update({ ...item, title: e.target.value })} />
       <MetaEditor item={item} update={update} />
       <textarea value={item.description || ''} placeholder="Description or study context…" onChange={(e) => update({ ...item, description: e.target.value })} />
-      <div className="actions"><button onClick={() => api.openFile(item.storedPath)}>Open file</button><button className="danger" onClick={() => remove(item.id)}><Trash2 size={16} /> Remove</button></div>
+      <div className="actions"><button onClick={() => api.openFile(item.storedPath)}>Open externally</button><button className="danger" onClick={() => remove(item.id)}><Trash2 size={16} /> Remove</button></div>
+      {item.type === 'pdf' && <div className="pdf-panel">
+        <div className="pdf-toolbar"><button onClick={() => goPage(page - 1)}>Previous</button><input type="number" min="1" value={page} onChange={(e) => goPage(e.target.value)} /><button onClick={() => goPage(page + 1)}>Next</button><button onClick={addPageBookmark}><Bookmark size={16} /> Bookmark page</button></div>
+        {pdfUrl ? <iframe className="pdf-frame" title={item.title} src={`${pdfUrl}#page=${page}&toolbar=1`} /> : <p className="muted">PDF preview unavailable for this placeholder.</p>}
+        <div className="bookmark-list"><strong>Bookmarks</strong>{(item.bookmarks || []).length === 0 && <span className="muted">No bookmarks yet.</span>}{(item.bookmarks || []).map((bookmark) => <button key={bookmark.id} onClick={() => goPage(bookmark.page)}>{bookmark.label}<span>Page {bookmark.page}</span><Trash2 size={14} onClick={(event) => { event.stopPropagation(); removePageBookmark(bookmark.id); }} /></button>)}</div>
+      </div>}
       <h3>Extracted/searchable text</h3><pre className="preview-text">{item.searchableText || 'No extracted text. Filename, tags and description are still searchable.'}</pre>
     </section>}
   </SplitPage>;
@@ -219,12 +270,15 @@ function SplitPage({ title, subtitle, items, selected, setSelected, children, em
 }
 
 function MarkdownEditor({ item, update, remove, bodyLabel, isIdea }) {
+  const exportMarkdown = async () => {
+    await api.exportMarkdown({ title: markdownFileName(item.title), content: exportItemToMarkdown(item, isIdea ? 'idea' : 'note') });
+  };
   return <section className="editor card">
     <input className="title-input" value={item.title} onChange={(e) => update({ ...item, title: e.target.value })} />
     {isIdea && <><input value={item.summary || ''} placeholder="One-line summary" onChange={(e) => update({ ...item, summary: e.target.value })} /><select value={item.status} onChange={(e) => update({ ...item, status: e.target.value })}><option>Raw</option><option>Developing</option><option>Useful</option><option>Archived</option></select></>}
     <MetaEditor item={item} update={update} />
     <div className="markdown-grid"><label><span>{bodyLabel}</span><textarea value={item.body} onChange={(e) => update({ ...item, body: e.target.value })} /></label><div className="markdown-preview"><ReactMarkdown>{item.body}</ReactMarkdown></div></div>
-    <div className="actions"><button><Save size={16} /> Auto-saved</button><button className="danger" onClick={() => remove(item.id)}><Trash2 size={16} /> Delete</button></div>
+    <div className="actions"><button><Save size={16} /> Auto-saved</button><button onClick={exportMarkdown}><Download size={16} /> Export .md</button><button className="danger" onClick={() => remove(item.id)}><Trash2 size={16} /> Delete</button></div>
   </section>;
 }
 
@@ -240,16 +294,25 @@ function SearchView({ results, filter, setFilter, openResult }) {
 }
 
 function TopicGraph({ data, setActive, setSelected }) {
-  const graph = useMemo(() => buildTopicGraph(data), [data]);
+  const [graphQuery, setGraphQuery] = useState('');
+  const [kinds, setKinds] = useState(['note', 'idea', 'file']);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const fullGraph = useMemo(() => buildTopicGraph(data), [data]);
+  const graph = useMemo(() => filterTopicGraph(fullGraph, { query: graphQuery, kinds }), [fullGraph, graphQuery, kinds]);
+  const viewWidth = 860 / zoom;
+  const viewHeight = 520 / zoom;
+  const toggleKind = (kind) => setKinds((current) => current.includes(kind) ? current.filter((x) => x !== kind) : [...current, kind]);
   const openNode = (node) => {
     if (node.kind === 'topic') return;
     setSelected(node.itemId);
     setActive(node.kind === 'file' ? 'library' : `${node.kind}s`);
   };
-  return <div className="page"><PageTitle title="Topic Graph" subtitle="Assign #topics to notes, ideas, and files. Shared topics become bubbles and lines in this study map." />
+  return <div className="page"><PageTitle title="Topic Graph" subtitle="Filter, zoom, and pan your #topic space." />
+    <section className="card graph-controls"><input value={graphQuery} onChange={(e) => setGraphQuery(e.target.value)} placeholder="Search topics or nodes…" />{['note', 'idea', 'file'].map((kind) => <button key={kind} className={kinds.includes(kind) ? 'active-chip' : ''} onClick={() => toggleKind(kind)}>{kind}</button>)}<button onClick={() => setZoom((z) => Math.min(2.2, z + 0.2))}><ZoomIn size={16} /></button><button onClick={() => setZoom((z) => Math.max(0.6, z - 0.2))}><ZoomOut size={16} /></button><button onClick={() => setPan({ x: pan.x - 60, y: pan.y })}>←</button><button onClick={() => setPan({ x: pan.x + 60, y: pan.y })}>→</button><button onClick={() => setPan({ x: pan.x, y: pan.y - 45 })}>↑</button><button onClick={() => setPan({ x: pan.x, y: pan.y + 45 })}>↓</button><button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); setGraphQuery(''); }}><RotateCcw size={16} /></button></section>
     <section className="card graph-card">
       {graph.nodes.length === 0 ? <div className="empty"><p>Add graph topics like <strong>#finance</strong> or <strong>#branding</strong> to a note, idea, or file to build the graph.</p></div> : <div className="graph-space">
-        <svg viewBox="-430 -260 860 520" role="img" aria-label="3D topic graph">
+        <svg viewBox={`${-viewWidth / 2 + pan.x} ${-viewHeight / 2 + pan.y} ${viewWidth} ${viewHeight}`} role="img" aria-label="3D topic graph">
           <defs>
             <filter id="softShadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="12" floodColor="#17324d" floodOpacity="0.20" /></filter>
           </defs>
@@ -259,7 +322,7 @@ function TopicGraph({ data, setActive, setSelected }) {
             if (!source || !target) return null;
             return <line key={`${link.source}-${link.target}-${index}`} x1={source.x} y1={source.y - source.z * 0.25} x2={target.x} y2={target.y - target.z * 0.25} className="graph-line" />;
           })}
-          {graph.nodes.sort((a, b) => a.z - b.z).map((node) => {
+          {[...graph.nodes].sort((a, b) => a.z - b.z).map((node) => {
             const y = node.y - node.z * 0.25;
             return <g key={node.id} className={`graph-node ${node.kind}`} transform={`translate(${node.x} ${y})`} onClick={() => openNode(node)}>
               <circle r={node.size / 2} filter="url(#softShadow)" />
@@ -270,15 +333,16 @@ function TopicGraph({ data, setActive, setSelected }) {
         </svg>
       </div>}
     </section>
-    <section className="card"><h2>How connections work</h2><p className="muted">A note, idea, or file becomes connected when it shares the same graph topic with another item. Use the new “Graph topics” field when editing material, or type hashtags directly in note/idea text.</p></section>
+    <section className="card"><h2>How connections work</h2><p className="muted">A note, idea, or file becomes connected when it shares the same graph topic with another item. Use the “Graph topics” field when editing material, or type hashtags directly in note/idea text.</p></section>
   </div>;
 }
 
-function SettingsView({ libraryPath, chooseLibrary, openLibrary, status, theme, toggleTheme }) {
+function SettingsView({ libraryPath, chooseLibrary, openLibrary, createBackup, restoreBackup, status, theme, toggleTheme }) {
   const cloud = cloudStatusForPath(libraryPath);
   return <div className="page"><PageTitle title="Settings" subtitle="Local-first storage. Cloud sync is handled by choosing a synced folder from your desktop cloud provider." />
     <section className="card settings-card"><h2>Appearance</h2><p className="muted">Switch between the stripped-back light workspace and dark mode.</p><div className="actions"><button onClick={toggleTheme}>{theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />} {theme === 'dark' ? 'Use light mode' : 'Use dark mode'}</button></div></section>
     <section className="card settings-card"><h2>Library location</h2><code>{libraryPath}</code><div className="actions"><button onClick={chooseLibrary}>Change location</button><button onClick={openLibrary}>Open folder</button></div><p className="muted">Status: {status}</p></section>
+    <section className="card settings-card"><h2>Backup & restore</h2><p className="muted">Create a manual JSON backup in your library backup folder, or restore from a previous Commonplace backup.</p><div className="actions"><button onClick={createBackup}><Download size={16} /> Create backup</button><button onClick={restoreBackup}><Upload size={16} /> Restore backup</button></div></section>
     <section className="card settings-card cloud-card"><h2><Cloud size={18} /> Cloud option</h2><div className={cloud.synced ? 'cloud-pill synced' : 'cloud-pill'}>{cloud.provider}</div><p>{cloud.message}</p><div className="provider-grid">{cloudProviderOptions.map((option) => <div key={option.name} className={option.name === cloud.provider ? 'provider active-provider' : 'provider'}><strong>{option.name}</strong><span>{option.hint}</span></div>)}</div><p className="muted">Commonplace does not run its own cloud server. It integrates with cloud by storing the selected library folder inside a provider’s desktop sync folder, which keeps the app offline-first and portable.</p></section>
   </div>;
 }

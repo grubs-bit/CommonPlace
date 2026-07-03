@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTopicGraph, normaliseTopics } from './graph';
+import { buildTopicGraph, filterTopicGraph, normaliseTopics } from './graph';
 
 const data = {
   notes: [
@@ -32,5 +32,12 @@ describe('buildTopicGraph', () => {
     const graph = buildTopicGraph(data);
     expect(graph.links).toContainEqual({ source: 'note:n1', target: 'idea:i1' });
     expect(graph.links).toContainEqual({ source: 'note:n1', target: 'file:f1' });
+  });
+
+  it('filters graph by topic query and item kind', () => {
+    const graph = filterTopicGraph(buildTopicGraph(data), { query: 'lux', kinds: ['file'] });
+    expect(graph.nodes.map((node) => node.id)).toContain('topic:luxury');
+    expect(graph.nodes.map((node) => node.id)).toContain('file:f1');
+    expect(graph.nodes.map((node) => node.id)).not.toContain('note:n1');
   });
 });

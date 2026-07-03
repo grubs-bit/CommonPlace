@@ -55,7 +55,8 @@ export function buildTopicGraph(data) {
     x: Math.cos(index * 1.7) * (180 + relatedItems.length * 15),
     y: Math.sin(index * 1.7) * 120,
     z: Math.sin(index * 0.9) * 70,
-    count: relatedItems.length
+    count: relatedItems.length,
+    topic
   }));
 
   const itemNodes = items.map((item, index) => ({
@@ -71,4 +72,26 @@ export function buildTopicGraph(data) {
   }));
 
   return { nodes: [...topicNodes, ...itemNodes], links };
+}
+
+export function filterTopicGraph(graph, { query = '', kinds = ['note', 'idea', 'file', 'topic'] } = {}) {
+  const q = String(query || '').replace(/^#/, '').toLowerCase().trim();
+  const allowedKinds = new Set(kinds.length ? [...kinds, 'topic'] : ['note', 'idea', 'file', 'topic']);
+  const keep = new Set();
+  for (const node of graph.nodes) {
+    const text = `${node.label || ''} ${(node.topics || []).join(' ')}`.toLowerCase();
+    const kindOk = allowedKinds.has(node.kind);
+    const queryOk = !q || text.includes(q);
+    if (kindOk && queryOk) keep.add(node.id);
+  }
+  for (const link of graph.links) {
+    if (keep.has(link.source) || keep.has(link.target)) {
+      keep.add(link.source);
+      keep.add(link.target);
+    }
+  }
+  const nodes = graph.nodes.filter((node) => keep.has(node.id) && allowedKinds.has(node.kind));
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  const links = graph.links.filter((link) => nodeIds.has(link.source) && nodeIds.has(link.target));
+  return { nodes, links };
 }

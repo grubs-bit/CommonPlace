@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+const { pathToFileURL } = require('url');
 const path = require('path');
 const fs = require('fs/promises');
 const fssync = require('fs');
@@ -163,6 +164,8 @@ async function addFiles() {
       module: '',
       description: '',
       searchableText,
+      bookmarks: [],
+      lastPage: 1,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -219,5 +222,38 @@ ipcMain.handle('library:open', async () => {
 });
 ipcMain.handle('files:add', addFiles);
 ipcMain.handle('file:open', async (_event, filePath) => shell.openPath(filePath));
+ipcMain.handle('file:preview-url', async (_event, filePath) => filePath ? pathToFileURL(filePath).toString() : null);
+ipcMain.handle('export:markdown', async (_event, { title, content }) => {
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export Markdown',
+    defaultPath: title,
+    filters: [{ name: 'Markdown', extensions: ['md'] }]
+  });
+  if (result.canceled || !result.filePath) return null;
+  await fs.writeFile(result.filePath, content, 'utf8');
+  return result.filePath;
+});
+ipcMain.handle('backup:create', async () => {
+  const libraryPath = await requireLibrary();
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const backupPath = path.join(libraryPath, 'backups', `commonplace-backup-${stamp}.json`);
+  await fs.copyFile(dataPath(libraryPath), backupPath);
+  return backupPath;
+});
+ipcMain.handle('backup:restore', async () => {
+  const libraryPath = await requireLibrary();
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Restore Commonplace Backup',
+    properties: ['openFile'],
+    filters: [{ name: 'Commonplace backup', extensions: ['json'] }]
+  });
+  if (result.canceled || !result.filePaths[0]) return null;
+  const restored = await readJson(result.filePaths[0], null);
+  if (!restored || !Array.isArray(restored.notes) || !Array.isArray(restored.ideas) || !Array.isArray(restored.files)) {
+    throw new Error('Selected file is not a valid Commonplace backup.');
+  }
+  await writeJson(dataPath(libraryPath), restored);
+  return { backupPath: result.filePaths[0], data: restored };
+});
 ipcMain.handle('data:save', async (_event, nextData) => saveData(nextData));
 ipcMain.handle('data:load', loadData);
