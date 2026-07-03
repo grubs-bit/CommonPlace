@@ -29,6 +29,7 @@ It is intentionally simple: no accounts, no AI layer, no forced cloud. You choos
 - **3D topic graph** — assign `#topics` to notes, ideas, and files, then explore them as connected bubbles.
 - **Local-first storage** — your data lives in a folder you choose on first launch.
 - **Cloud optional** — choose an iCloud, OneDrive, Dropbox, or Google Drive folder and Commonplace will use that provider’s desktop sync.
+- **Dark mode + sharper UI** — a cleaner, less generic workspace with tighter edges and a dedicated appearance toggle.
 - **No AI** — this app does not summarise, train on, or send your notes anywhere.
 
 ## Screens / Sections
@@ -135,7 +136,9 @@ For the most reliable Windows installer, build on a Windows machine or use GitHu
 
 This is an early working build. Core functionality exists:
 
-- app shell and academic dashboard
+- app shell and sharper academic dashboard
+- custom Commonplace app icon
+- light/dark appearance toggle
 - first-launch library folder picker
 - markdown notes
 - ideas with statuses

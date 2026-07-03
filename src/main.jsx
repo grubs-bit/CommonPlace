@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import ReactMarkdown from 'react-markdown';
-import { BookOpen, Cloud, FilePlus, FolderOpen, Home, Lightbulb, Network, Plus, Save, Search, Settings, StickyNote, Trash2 } from 'lucide-react';
+import { BookOpen, Cloud, FilePlus, FolderOpen, Home, Lightbulb, Moon, Network, Plus, Save, Search, Settings, StickyNote, Sun, Trash2 } from 'lucide-react';
 import { createIdea, createNote, emptyData, formatTags, parseTags, touch } from './lib/data';
 import { buildTopicGraph } from './lib/graph';
 import { cloudProviderOptions, cloudStatusForPath } from './lib/cloud';
 import { searchAll } from './lib/search';
+import { nextTheme, readStoredTheme, storeTheme } from './lib/theme';
+import appIcon from '../assets/commonplace-app-icon.png';
 import './styles.css';
 
 const api = window.commonplace;
@@ -26,6 +28,14 @@ function App() {
   const [query, setQuery] = useState('');
   const [searchFilter, setSearchFilter] = useState('all');
   const [status, setStatus] = useState('Starting…');
+  const [theme, setTheme] = useState(() => readStoredTheme(window.localStorage));
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    storeTheme(window.localStorage, theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme((current) => nextTheme(current));
 
   useEffect(() => {
     api.init().then((result) => {
@@ -77,17 +87,17 @@ function App() {
   const results = useMemo(() => searchAll(data, query, searchFilter), [data, query, searchFilter]);
 
   if (!libraryPath) {
-    return <Welcome onChoose={chooseLibrary} />;
+    return <Welcome onChoose={chooseLibrary} theme={theme} toggleTheme={toggleTheme} />;
   }
 
   return (
     <div className="shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="seal">C</div>
+          <img className="brand-icon" src={appIcon} alt="Commonplace" />
           <div>
             <h1>Commonplace</h1>
-            <p>Academic note bank</p>
+            <p>Study operating system</p>
           </div>
         </div>
         <nav>
@@ -109,6 +119,9 @@ function App() {
             <Search size={18} />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search every note, idea, PDF and import…" />
           </div>
+          <button className="icon-button" onClick={toggleTheme} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
           <button onClick={addNote}><Plus size={16} /> Note</button>
           <button onClick={addIdea}><Plus size={16} /> Idea</button>
           <button className="primary" onClick={addFiles}><FilePlus size={16} /> Add files</button>
@@ -127,7 +140,7 @@ function App() {
             {active === 'notes' && <Notes data={data} persist={persist} selected={selected} setSelected={setSelected} addNote={addNote} />}
             {active === 'ideas' && <Ideas data={data} persist={persist} selected={selected} setSelected={setSelected} addIdea={addIdea} />}
             {active === 'graph' && <TopicGraph data={data} setActive={setActive} setSelected={setSelected} />}
-            {active === 'settings' && <SettingsView libraryPath={libraryPath} chooseLibrary={chooseLibrary} openLibrary={() => api.openLibrary()} status={status} />}
+            {active === 'settings' && <SettingsView libraryPath={libraryPath} chooseLibrary={chooseLibrary} openLibrary={() => api.openLibrary()} status={status} theme={theme} toggleTheme={toggleTheme} />}
           </>
         )}
       </main>
@@ -135,13 +148,15 @@ function App() {
   );
 }
 
-function Welcome({ onChoose }) {
+function Welcome({ onChoose, theme, toggleTheme }) {
   return (
     <div className="welcome">
+      <button className="theme-floating" onClick={toggleTheme}>{theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />} {theme === 'dark' ? 'Light' : 'Dark'}</button>
       <section>
-        <div className="seal large">C</div>
+        <img className="welcome-icon" src={appIcon} alt="Commonplace icon" />
+        <p className="eyebrow">LOCAL-FIRST STUDY SYSTEM</p>
         <h1>Commonplace</h1>
-        <p>A local-first academic dashboard for PDFs, markdown notes, ideas, and search. No AI. No account. Your library lives wherever you choose.</p>
+        <p>A sharper academic workspace for PDFs, markdown notes, ideas, topics, and search. No AI. No account. Your library lives wherever you choose.</p>
         <button className="primary big" onClick={onChoose}><FolderOpen size={18} /> Choose library folder</button>
       </section>
     </div>
@@ -259,9 +274,10 @@ function TopicGraph({ data, setActive, setSelected }) {
   </div>;
 }
 
-function SettingsView({ libraryPath, chooseLibrary, openLibrary, status }) {
+function SettingsView({ libraryPath, chooseLibrary, openLibrary, status, theme, toggleTheme }) {
   const cloud = cloudStatusForPath(libraryPath);
   return <div className="page"><PageTitle title="Settings" subtitle="Local-first storage. Cloud sync is handled by choosing a synced folder from your desktop cloud provider." />
+    <section className="card settings-card"><h2>Appearance</h2><p className="muted">Switch between the stripped-back light workspace and dark mode.</p><div className="actions"><button onClick={toggleTheme}>{theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />} {theme === 'dark' ? 'Use light mode' : 'Use dark mode'}</button></div></section>
     <section className="card settings-card"><h2>Library location</h2><code>{libraryPath}</code><div className="actions"><button onClick={chooseLibrary}>Change location</button><button onClick={openLibrary}>Open folder</button></div><p className="muted">Status: {status}</p></section>
     <section className="card settings-card cloud-card"><h2><Cloud size={18} /> Cloud option</h2><div className={cloud.synced ? 'cloud-pill synced' : 'cloud-pill'}>{cloud.provider}</div><p>{cloud.message}</p><div className="provider-grid">{cloudProviderOptions.map((option) => <div key={option.name} className={option.name === cloud.provider ? 'provider active-provider' : 'provider'}><strong>{option.name}</strong><span>{option.hint}</span></div>)}</div><p className="muted">Commonplace does not run its own cloud server. It integrates with cloud by storing the selected library folder inside a provider’s desktop sync folder, which keeps the app offline-first and portable.</p></section>
   </div>;
