@@ -3,7 +3,7 @@
 
   # Commonplace
 
-  **A calm, local-first academic dashboard for notes, PDFs, ideas, and universal search.**
+  **A local-first desktop student assistant for notes, PDFs, ideas, topic graphs, and universal search.**
 
   <p>
     <img alt="Platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-f3ead8?style=for-the-badge&labelColor=17324d&color=f3ead8">
@@ -11,13 +11,38 @@
     <img alt="Local First" src="https://img.shields.io/badge/local--first-no%20account-f3ead8?style=for-the-badge&labelColor=17324d&color=f3ead8">
     <img alt="AI Free" src="https://img.shields.io/badge/AI-none-f3ead8?style=for-the-badge&labelColor=17324d&color=f3ead8">
   </p>
+
+  <p>
+    <a href="https://github.com/grubs-bit/CommonPlace/releases/tag/v0.1.0"><strong>Download v0.1.0</strong></a>
+    ·
+    <a href="#getting-started">Run from source</a>
+    ·
+    <a href="#roadmap">Roadmap</a>
+  </p>
 </div>
 
 ---
 
-Commonplace is a desktop student assistant designed for keeping university material tidy without turning your study life into a corporate SaaS dashboard. It gives you one place for **markdown notes**, **PDFs/imports**, **developing ideas**, and **search across everything**.
+Commonplace is a desktop student assistant designed for keeping university material tidy without turning your study life into a corporate SaaS dashboard. It gives you one place for **markdown notes**, **PDFs/imports**, **developing ideas**, **topic maps**, and **search across everything**.
 
-It is intentionally simple: no accounts, no AI layer, no forced cloud. You choose where your library lives.
+It is intentionally restrained: no accounts, no AI layer, no forced cloud. You choose where your library lives.
+
+## Download
+
+Prebuilt desktop builds are available on the GitHub release page:
+
+```text
+https://github.com/grubs-bit/CommonPlace/releases/tag/v0.1.0
+```
+
+| Platform | Asset | Notes |
+|---|---|---|
+| macOS Apple Silicon | `Commonplace-0.1.0-arm64.dmg` | Unsigned; right-click → Open if Gatekeeper warns. |
+| macOS Apple Silicon | `Commonplace-0.1.0-arm64-mac.zip` | Zipped `.app` alternative. |
+| Windows x64 | `Commonplace.Setup.0.1.0.exe` | Installer; unsigned, so SmartScreen may warn. |
+| Windows x64 | `Commonplace.0.1.0.exe` | Portable executable; unsigned. |
+
+> Current builds are unsigned. That is expected until code-signing certificates / Apple Developer ID are added.
 
 ## Highlights
 
@@ -36,12 +61,12 @@ It is intentionally simple: no accounts, no AI layer, no forced cloud. You choos
 
 ```text
 Commonplace
-├── Dashboard   Recent material and quick overview
-├── Library     PDFs, markdown files, text imports
-├── Notes       Markdown note editor and preview
-├── Ideas       Expandable idea bank for essays, projects, research
-├── Topic Graph 3D bubble map connecting shared #topics
-└── Settings    Library location and cloud sync detection
+├── Dashboard     Recent material and quick overview
+├── Library       PDFs, markdown files, text imports
+├── Notes         Markdown editor and preview
+├── Ideas         Expandable idea bank for essays, projects, research
+├── Topic Graph   3D bubble map connecting shared #topics
+└── Settings      Appearance, library location, cloud sync detection
 ```
 
 ## Storage Model
@@ -57,7 +82,25 @@ Commonplace Library/
 └── backups/
 ```
 
-The app source code is separate from user data. Users can place their library anywhere, including a synced cloud folder.
+The app source code is separate from user data. Users can place their library anywhere, including a synced cloud folder. Cloud sync is intentionally provider-based: choose an iCloud/OneDrive/Google Drive/Dropbox folder and let that provider sync the files.
+
+## Current Status
+
+This is an early working `v0.1.0` build. Core functionality exists:
+
+- app shell and sharper academic dashboard
+- custom Commonplace app icon
+- light/dark appearance toggle
+- first-launch library folder picker
+- markdown notes with preview
+- ideas with statuses and markdown detail
+- PDF/text/markdown imports
+- `#topic` assignment for notes, ideas, and files
+- 3D topic graph with bubble and line connections
+- universal search
+- cloud provider detection/integration via synced folders
+- unsigned macOS Apple Silicon release artifacts
+- unsigned Windows x64 release artifacts
 
 ## Tech Stack
 
@@ -130,34 +173,42 @@ Windows packaging is configured with Electron Builder:
 npm run package:win
 ```
 
-For the most reliable Windows installer, build on a Windows machine or use GitHub Actions. Building Windows installers from macOS may require extra tooling such as Wine.
+Outputs include:
 
-## Current Status
+```text
+release/
+├── Commonplace Setup 0.1.0.exe
+├── Commonplace 0.1.0.exe
+└── win-unpacked/Commonplace.exe
+```
 
-This is an early working build. Core functionality exists:
-
-- app shell and sharper academic dashboard
-- custom Commonplace app icon
-- light/dark appearance toggle
-- first-launch library folder picker
-- markdown notes
-- ideas with statuses
-- PDF/text/markdown imports
-- `#topic` assignment for notes, ideas, and files
-- 3D topic graph with bubble and line connections
-- universal search
-- cloud provider detection/integration via synced folders
-- unsigned macOS packaging
-- Windows packaging configuration
+For the most reliable Windows installer, build on a Windows machine or use GitHub Actions. Windows builds produced from macOS should still be tested on Windows before broad distribution.
 
 ## Roadmap
 
-- Custom app icon using the Commonplace logo
-- Better PDF preview inside the app
-- Export notes as `.md`
-- Backup and restore controls
-- GitHub Actions for macOS and Windows releases
-- Optional portable library mode
+### Near term
+
+- Improve in-app PDF viewing and page navigation.
+- Add export for notes and ideas as `.md` files.
+- Add manual backup and restore controls.
+- Add a better empty-state/sample-library onboarding flow.
+- Improve topic graph controls: zoom, pan, filtering, and topic search.
+
+### Release/distribution
+
+- Add GitHub Actions to build macOS and Windows artifacts automatically.
+- Add Windows test pass on a real Windows runner/machine.
+- Add universal macOS builds if Intel Mac support is needed.
+- Add optional code signing/notarization later.
+- Add release checksums for downloaded assets.
+
+### Later ideas
+
+- Optional portable-library mode.
+- Better PDF text extraction status and retry controls.
+- Import/export full libraries as archives.
+- More keyboard shortcuts.
+- Per-module/course organization views.
 
 ## Philosophy
 
