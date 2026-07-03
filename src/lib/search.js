@@ -13,7 +13,7 @@ export function searchAll(data, query, filter = 'all') {
   const results = [];
   if (filter === 'all' || filter === 'notes') {
     for (const note of data.notes || []) {
-      if (includesQuery([note.title, note.body, note.module, ...(note.tags || [])], q)) {
+      if (includesQuery([note.title, note.body, note.module, ...(note.tags || []), ...(note.topics || [])], q)) {
         results.push({ type: 'note', id: note.id, title: note.title, excerpt: snippet(note.body, q), item: note });
       }
     }
@@ -21,7 +21,7 @@ export function searchAll(data, query, filter = 'all') {
 
   if (filter === 'all' || filter === 'ideas') {
     for (const idea of data.ideas || []) {
-      if (includesQuery([idea.title, idea.summary, idea.body, idea.module, idea.status, ...(idea.tags || [])], q)) {
+      if (includesQuery([idea.title, idea.summary, idea.body, idea.module, idea.status, ...(idea.tags || []), ...(idea.topics || [])], q)) {
         results.push({ type: 'idea', id: idea.id, title: idea.title, excerpt: snippet(`${idea.summary}\n${idea.body}`, q), item: idea });
       }
     }
@@ -29,7 +29,7 @@ export function searchAll(data, query, filter = 'all') {
 
   if (filter === 'all' || filter === 'files') {
     for (const file of data.files || []) {
-      if (includesQuery([file.title, file.description, file.module, file.type, file.searchableText, ...(file.tags || [])], q)) {
+      if (includesQuery([file.title, file.description, file.module, file.type, file.searchableText, ...(file.tags || []), ...(file.topics || [])], q)) {
         results.push({ type: 'file', id: file.id, title: file.title, excerpt: snippet(file.searchableText || file.description || file.storedPath, q), item: file });
       }
     }

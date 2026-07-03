@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import ReactMarkdown from 'react-markdown';
-import { BookOpen, FilePlus, FolderOpen, Home, Lightbulb, Plus, Save, Search, Settings, StickyNote, Trash2 } from 'lucide-react';
+import { BookOpen, Cloud, FilePlus, FolderOpen, Home, Lightbulb, Network, Plus, Save, Search, Settings, StickyNote, Trash2 } from 'lucide-react';
 import { createIdea, createNote, emptyData, formatTags, parseTags, touch } from './lib/data';
+import { buildTopicGraph } from './lib/graph';
+import { cloudProviderOptions, cloudStatusForPath } from './lib/cloud';
 import { searchAll } from './lib/search';
 import './styles.css';
 
@@ -12,6 +14,7 @@ const nav = [
   { id: 'library', label: 'Library', icon: BookOpen },
   { id: 'notes', label: 'Notes', icon: StickyNote },
   { id: 'ideas', label: 'Ideas', icon: Lightbulb },
+  { id: 'graph', label: 'Topic Graph', icon: Network },
   { id: 'settings', label: 'Settings', icon: Settings }
 ];
 
@@ -123,6 +126,7 @@ function App() {
             {active === 'library' && <Library data={data} persist={persist} addFiles={addFiles} selected={selected} setSelected={setSelected} />}
             {active === 'notes' && <Notes data={data} persist={persist} selected={selected} setSelected={setSelected} addNote={addNote} />}
             {active === 'ideas' && <Ideas data={data} persist={persist} selected={selected} setSelected={setSelected} addIdea={addIdea} />}
+            {active === 'graph' && <TopicGraph data={data} setActive={setActive} setSelected={setSelected} />}
             {active === 'settings' && <SettingsView libraryPath={libraryPath} chooseLibrary={chooseLibrary} openLibrary={() => api.openLibrary()} status={status} />}
           </>
         )}
@@ -210,7 +214,7 @@ function MarkdownEditor({ item, update, remove, bodyLabel, isIdea }) {
 }
 
 function MetaEditor({ item, update }) {
-  return <div className="meta-grid"><input value={item.module || ''} placeholder="Module / class" onChange={(e) => update({ ...item, module: e.target.value })} /><input value={formatTags(item.tags)} placeholder="Tags, comma separated" onChange={(e) => update({ ...item, tags: parseTags(e.target.value) })} /></div>;
+  return <div className="meta-grid"><input value={item.module || ''} placeholder="Module / class" onChange={(e) => update({ ...item, module: e.target.value })} /><input value={formatTags(item.tags)} placeholder="Tags, comma separated" onChange={(e) => update({ ...item, tags: parseTags(e.target.value) })} /><input className="topic-input" value={formatTags(item.topics || [])} placeholder="Graph topics: #finance, #branding, #exam" onChange={(e) => update({ ...item, topics: parseTags(e.target.value).map((topic) => topic.replace(/^#/, '').toLowerCase()) })} /></div>;
 }
 
 function SearchView({ results, filter, setFilter, openResult }) {
@@ -220,9 +224,46 @@ function SearchView({ results, filter, setFilter, openResult }) {
   </div>;
 }
 
+function TopicGraph({ data, setActive, setSelected }) {
+  const graph = useMemo(() => buildTopicGraph(data), [data]);
+  const openNode = (node) => {
+    if (node.kind === 'topic') return;
+    setSelected(node.itemId);
+    setActive(node.kind === 'file' ? 'library' : `${node.kind}s`);
+  };
+  return <div className="page"><PageTitle title="Topic Graph" subtitle="Assign #topics to notes, ideas, and files. Shared topics become bubbles and lines in this study map." />
+    <section className="card graph-card">
+      {graph.nodes.length === 0 ? <div className="empty"><p>Add graph topics like <strong>#finance</strong> or <strong>#branding</strong> to a note, idea, or file to build the graph.</p></div> : <div className="graph-space">
+        <svg viewBox="-430 -260 860 520" role="img" aria-label="3D topic graph">
+          <defs>
+            <filter id="softShadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="12" floodColor="#17324d" floodOpacity="0.20" /></filter>
+          </defs>
+          {graph.links.map((link, index) => {
+            const source = graph.nodes.find((node) => node.id === link.source);
+            const target = graph.nodes.find((node) => node.id === link.target);
+            if (!source || !target) return null;
+            return <line key={`${link.source}-${link.target}-${index}`} x1={source.x} y1={source.y - source.z * 0.25} x2={target.x} y2={target.y - target.z * 0.25} className="graph-line" />;
+          })}
+          {graph.nodes.sort((a, b) => a.z - b.z).map((node) => {
+            const y = node.y - node.z * 0.25;
+            return <g key={node.id} className={`graph-node ${node.kind}`} transform={`translate(${node.x} ${y})`} onClick={() => openNode(node)}>
+              <circle r={node.size / 2} filter="url(#softShadow)" />
+              <text y={node.kind === 'topic' ? 4 : 34} textAnchor="middle">{node.label.length > 22 ? `${node.label.slice(0, 20)}…` : node.label}</text>
+              {node.kind === 'topic' && <text y={-node.size / 2 - 8} textAnchor="middle" className="count">{node.count}</text>}
+            </g>;
+          })}
+        </svg>
+      </div>}
+    </section>
+    <section className="card"><h2>How connections work</h2><p className="muted">A note, idea, or file becomes connected when it shares the same graph topic with another item. Use the new “Graph topics” field when editing material, or type hashtags directly in note/idea text.</p></section>
+  </div>;
+}
+
 function SettingsView({ libraryPath, chooseLibrary, openLibrary, status }) {
-  return <div className="page"><PageTitle title="Settings" subtitle="Local-first storage. Cloud is optional: choose an iCloud, OneDrive, Dropbox or Google Drive folder." />
+  const cloud = cloudStatusForPath(libraryPath);
+  return <div className="page"><PageTitle title="Settings" subtitle="Local-first storage. Cloud sync is handled by choosing a synced folder from your desktop cloud provider." />
     <section className="card settings-card"><h2>Library location</h2><code>{libraryPath}</code><div className="actions"><button onClick={chooseLibrary}>Change location</button><button onClick={openLibrary}>Open folder</button></div><p className="muted">Status: {status}</p></section>
+    <section className="card settings-card cloud-card"><h2><Cloud size={18} /> Cloud option</h2><div className={cloud.synced ? 'cloud-pill synced' : 'cloud-pill'}>{cloud.provider}</div><p>{cloud.message}</p><div className="provider-grid">{cloudProviderOptions.map((option) => <div key={option.name} className={option.name === cloud.provider ? 'provider active-provider' : 'provider'}><strong>{option.name}</strong><span>{option.hint}</span></div>)}</div><p className="muted">Commonplace does not run its own cloud server. It integrates with cloud by storing the selected library folder inside a provider’s desktop sync folder, which keeps the app offline-first and portable.</p></section>
   </div>;
 }
 

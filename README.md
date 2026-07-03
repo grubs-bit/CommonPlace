@@ -25,9 +25,10 @@ It is intentionally simple: no accounts, no AI layer, no forced cloud. You choos
 - **Markdown notes** — write structured study notes with a live preview.
 - **Idea bank** — collect raw ideas, expand them with markdown, and mark them as `Raw`, `Developing`, `Useful`, or `Archived`.
 - **Library imports** — add PDFs, markdown files, and text notes.
-- **Universal search** — search notes, ideas, imported file metadata, tags, modules, and extracted text.
+- **Universal search** — search notes, ideas, imported file metadata, tags, modules, topics, and extracted text.
+- **3D topic graph** — assign `#topics` to notes, ideas, and files, then explore them as connected bubbles.
 - **Local-first storage** — your data lives in a folder you choose on first launch.
-- **Cloud optional** — pick an iCloud, OneDrive, Dropbox, or Google Drive folder if you want sync.
+- **Cloud optional** — choose an iCloud, OneDrive, Dropbox, or Google Drive folder and Commonplace will use that provider’s desktop sync.
 - **No AI** — this app does not summarise, train on, or send your notes anywhere.
 
 ## Screens / Sections
@@ -38,7 +39,8 @@ Commonplace
 ├── Library     PDFs, markdown files, text imports
 ├── Notes       Markdown note editor and preview
 ├── Ideas       Expandable idea bank for essays, projects, research
-└── Settings    Library location and storage controls
+├── Topic Graph 3D bubble map connecting shared #topics
+└── Settings    Library location and cloud sync detection
 ```
 
 ## Storage Model
@@ -138,7 +140,10 @@ This is an early working build. Core functionality exists:
 - markdown notes
 - ideas with statuses
 - PDF/text/markdown imports
+- `#topic` assignment for notes, ideas, and files
+- 3D topic graph with bubble and line connections
 - universal search
+- cloud provider detection/integration via synced folders
 - unsigned macOS packaging
 - Windows packaging configuration
 

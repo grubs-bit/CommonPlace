@@ -159,6 +159,7 @@ async function addFiles() {
       storedPath: destination,
       originalPath: sourcePath,
       tags: [],
+      topics: [],
       module: '',
       description: '',
       searchableText,
