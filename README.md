@@ -13,7 +13,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/grubs-bit/CommonPlace/releases/tag/v0.1.0"><strong>Download v0.1.0</strong></a>
+    <a href="https://github.com/grubs-bit/CommonPlace/releases/tag/v0.2.0"><strong>Download v0.2.0</strong></a>
     ·
     <a href="#getting-started">Run from source</a>
     ·
@@ -32,15 +32,15 @@ It is intentionally restrained: no accounts, no AI layer, no forced cloud. You c
 Prebuilt desktop builds are available on the GitHub release page:
 
 ```text
-https://github.com/grubs-bit/CommonPlace/releases/tag/v0.1.0
+https://github.com/grubs-bit/CommonPlace/releases/tag/v0.2.0
 ```
 
 | Platform | Asset | Notes |
 |---|---|---|
-| macOS Apple Silicon | `Commonplace-0.1.0-arm64.dmg` | Unsigned; right-click → Open if Gatekeeper warns. |
-| macOS Apple Silicon | `Commonplace-0.1.0-arm64-mac.zip` | Zipped `.app` alternative. |
-| Windows x64 | `Commonplace.Setup.0.1.0.exe` | Installer; unsigned, so SmartScreen may warn. |
-| Windows x64 | `Commonplace.0.1.0.exe` | Portable executable; unsigned. |
+| macOS Apple Silicon | `Commonplace-0.2.0-arm64.dmg` | Unsigned; right-click → Open if Gatekeeper warns. |
+| macOS Apple Silicon | `Commonplace-0.2.0-arm64-mac.zip` | Zipped `.app` alternative. |
+| Windows x64 | `Commonplace.Setup.0.2.0.exe` | Installer; unsigned, so SmartScreen may warn. |
+| Windows x64 | `Commonplace.0.2.0.exe` | Portable executable; unsigned. |
 
 > Current builds are unsigned. That is expected until code-signing certificates / Apple Developer ID are added.
 
@@ -86,7 +86,7 @@ The app source code is separate from user data. Users can place their library an
 
 ## Current Status
 
-This is an early working `v0.1.0` build. Core functionality exists:
+This is an early working `v0.2.0` build. Core functionality exists:
 
 - app shell and sharper academic dashboard
 - custom Commonplace app icon
@@ -163,8 +163,8 @@ Outputs are created under:
 
 ```text
 release/
-├── Commonplace-0.1.0-arm64.dmg
-├── Commonplace-0.1.0-arm64-mac.zip
+├── Commonplace-0.2.0-arm64.dmg
+├── Commonplace-0.2.0-arm64-mac.zip
 └── mac-arm64/Commonplace.app
 ```
 
@@ -182,8 +182,8 @@ Outputs include:
 
 ```text
 release/
-├── Commonplace Setup 0.1.0.exe
-├── Commonplace 0.1.0.exe
+├── Commonplace Setup 0.2.0.exe
+├── Commonplace 0.2.0.exe
 └── win-unpacked/Commonplace.exe
 ```
 

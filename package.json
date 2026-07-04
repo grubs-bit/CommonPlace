@@ -1,6 +1,6 @@
 {
   "name": "commonplace-student-assistant",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A local-first academic dashboard for PDFs, markdown notes, ideas, and universal search.",
   "main": "electron/main.cjs",
   "author": "Eshaan Collaco",
@@ -52,11 +52,17 @@
     "mac": {
       "category": "public.app-category.productivity",
       "icon": "build/icon.icns",
-      "target": ["dmg", "zip"]
+      "target": [
+        "dmg",
+        "zip"
+      ]
     },
     "win": {
       "icon": "build/icon.ico",
-      "target": ["nsis", "portable"]
+      "target": [
+        "nsis",
+        "portable"
+      ]
     }
   }
 }
